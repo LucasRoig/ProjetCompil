@@ -18,3 +18,12 @@ _build/
 # oasis generated files
 setup.data
 setup.log
+
+#liste d'expression
+tmp_exp.txt
+
+#fichier compilé
+comp
+lexer.ml
+parser.ml
+parser.mli
