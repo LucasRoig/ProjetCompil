@@ -16,9 +16,35 @@ type erreur_de_type =
   | Indefini of string      (* variable utilisee mais non definie *)
   | Conflit of tp * tp (* conflit de types *)
   | Arite of string * int * int     (* mauvais nombre d’arguments *)
+  | Fundecl_err of string * string (*mauvaise declaration de fonction *)
 ;;
 
 exception Erreur_typage of erreur_de_type;;
+let env_initial funList =
+  {localvar = [];
+   globalvar = [];
+   returntp = VoidT;
+   funbind = List.map (function Fundefn(decl,_,_) -> decl ) funList}
+;;
+let ajout_variable_locale (Vardecl(tp,nom)) env =
+  {localvar= (nom,tp)::env.localvar;
+   globalvar= env.globalvar;
+   returntp= env.returntp;
+   funbind= env.funbind}
+;;
+let ajout_variable_globale (Vardecl(tp,nom)) env =
+  {localvar= env.localvar;
+   globalvar= (nom,tp)::env.globalvar;
+   returntp= env.returntp;
+   funbind= env.funbind}
+;;
+
+let change_returntp tp env =
+  {localvar = env.localvar;
+   globalvar = env.globalvar;
+   returntp = tp;
+   funbind = env.funbind}
+;;
 
 let cherche_ident liste nom =
   try List.assoc nom liste with Not_found -> raise(Erreur_typage(Indefini(nom)))
@@ -72,8 +98,56 @@ let rec tp_expr env = function
           CallE(tp,name,argsReels)
 ;;
 
-(* TODO: put your definitions here *)
+let rec tp_stmt env = function
+    Skip -> Skip
+  | Return exp ->
+     let e = tp_expr env exp in
+     verifie_type env.returntp (tp_of_expr e);
+     Return e (*Que donne return; (sans expression)*)
+  | Seq(s1,s2) -> Seq(tp_stmt env s1, tp_stmt env s2)
+  | Assign (_,Var(binding,nom),exp) ->
+     let varType = if (binding = Local) then cherche_var_locale env nom
+                             else cherche_var_globale env nom in
+     let e = tp_expr env exp in
+     verifie_type varType (tp_of_expr e);
+     Assign(VoidT,Var(binding,nom),e)
+  | Cond(test,t,f) ->
+     let expTest = tp_expr env test in
+     verifie_type BoolT (tp_of_expr expTest);
+     Cond(expTest, tp_stmt env t, tp_stmt env f)
+  | While(cond,stmt) ->
+     let exp = tp_expr env cond in
+     verifie_type BoolT (tp_of_expr exp);
+     While(exp,tp_stmt env stmt)
+  | CallC(name,args) ->
+     let Fundecl(_,_,argsAttendus) = cherche_fun env name in
+     if List.length args <> List.length argsAttendus
+     then raise(Erreur_typage(Arite(name,List.length args,List.length argsAttendus)))
+     else let argsReels = List.map(tp_expr env) args in
+          List.iter2 verifie_type (List.map tp_of_vardecl argsAttendus) (List.map tp_of_expr argsReels);
+          CallC(name,argsReels)
+;;
+(*tester cette fonction est plus que necessaire*)
+let pas_doublons nom list =
+  let table = Hashtbl.create (List.length list) in
+  let append e = if Hashtbl.mem table e
+    then raise(Erreur_typage(Fundecl_err(nom,"Certains parametres ou variables ont le meme nom")))
+    else Hashtbl.add table e true in
+  List.iter append list;;
+
+let tp_fdefn env (Fundefn(Fundecl(tpRet,name,params),locVars,body)) =
+  (*Verifier que le type des parametres et des variables n'est pas void*)
+  let params_et_vars = params@locVars in
+  if List.exists (function (Vardecl(tp,_)) -> tp = VoidT) params_et_vars
+  then raise (Erreur_typage(Fundecl_err(name,"Un parametre ou une variable locale est de type void")))
+  else (*Verifier que les parametres et les variables ont un nom different*)
+    pas_doublons name params_et_vars;
+    let newEnv = List.fold_right ajout_variable_locale params_et_vars (change_returntp tpRet env) in
+    Fundefn(Fundecl(tpRet,name,params),locVars,tp_stmt newEnv body)
+;;
+
+(*Faire un joli affichage d'erreurs serait sympa*)
 let tp_prog (Prog (gvds, fdfs)) =
-  Prog([],
-       [Fundefn (Fundecl (BoolT, "even", [Vardecl (IntT, "n")]), [], Skip)])
+  let env_initial = List.fold_right ajout_variable_globale gvds (env_initial fdfs) in
+  Prog(gvds, List.map (tp_fdefn env_initial) fdfs)
 ;;
