@@ -8,6 +8,11 @@ let compte_labels = ref 0;;
 let incr_cpt_label () =
   incr compte_labels;[!compte_labels];; (*On a apparement besoin d'une liste d'int*)
 
+(*Remplace un type BoolT en IntT*)
+let boolT_to_intT = function
+    BoolT -> IntT
+  | tp -> tp
+;;
 (* ************************************************************ *)
 (* **** Compilation of expressions / statements            **** *)
 (* ************************************************************ *)
@@ -40,8 +45,8 @@ let rec gen_exp varList = function
      (Label lbl_false::(gen_exp varList exp3)@[Label lbl_fin])
   | CallE(t,name,expList) ->
      let push_args = List.concat (List.map (gen_exp varList) expList) in
-     let ret_type = if t = BoolT then IntT else t in
-     let args_tps = List.map (function BoolT -> IntT | t -> t) (List.map tp_of_expr expList) in
+     let ret_type = boolT_to_intT t in
+     let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(ret_type,name,args_tps)]
   | _ ->
      failwith "Le filtrage de gen_exp n'as pas fonctionne, il y a certainement une erreur de typage"
@@ -67,19 +72,31 @@ let rec gen_stmt varList = function
        (*Comment trouver le type de la fonction sans environnement ?*)
   | CallC(name,expList) ->
      let push_args = List.concat (List.map (gen_exp varList) expList) in
-     let args_tps = List.map (function BoolT -> IntT | t -> t) (List.map tp_of_expr expList) in
+     let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(VoidT,name,args_tps)]
   | Return exp ->
      let tp = tp_of_expr exp in
      [ReturnI tp]
+;;
+
+(*Genere la suite de loadc permettant de recuperer les parametres sur la pile
+Il faut tester si les parametres finissent dans les bons registres ou sont inverse.*)
+let gen_store_params list =
+  let rec aux i = function
+      [] -> []
+    | t::q -> Loadc(IntT,IntV i)::(aux (i+1) q) in
+  aux 0 list
+;;
+
+let gen_fundefn (Fundefn (Fundecl(retTp,fname,params), locVars, stmt)) =
+  let meth_info = Methinfo(50,50) in (*constantes arbitraires pour l'instant*)
+  let meth_decl = Methdecl(boolT_to_intT retTp,fname,List.map boolT_to_intT (List.map tp_of_vardecl params)) in
+  let stmt_list = (gen_store_params params)@(gen_stmt (List.map name_of_vardecl (params@locVars)) stmt) in
+  Methdefn(meth_decl,meth_info,stmt_list)
 ;;
 (* ************************************************************ *)
 (* **** Compilation of methods / programs                  **** *)
 (* ************************************************************ *)
 
 let gen_prog (Prog (gvds, fdfs)) =
-  JVMProg ([],
-           [Methdefn (Methdecl (IntT, "even", [IntT]),
-                      Methinfo (3, 1),
-                      [Loadc (IntT, IntV 0); ReturnI IntT])])
-
+  JVMProg(gvds,List.map gen_fundefn fdfs);;
