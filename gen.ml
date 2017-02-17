@@ -47,7 +47,32 @@ let rec gen_exp varList = function
      failwith "Le filtrage de gen_exp n'as pas fonctionne, il y a certainement une erreur de typage"
 ;;
 
-
+let rec gen_stmt varList = function
+    Skip -> [Nop]
+  | Assign(tp,Var(binding,name),exp)->
+     let pos = position name varList in
+     (gen_exp varList exp)@[Storev(IntT,pos)]
+  | Seq(s1,s2) -> (gen_stmt varList s1)@(gen_stmt varList s2)
+  | Cond(test,t,f) ->
+     let lbl_false = incr_cpt_label () and lbl_fin = incr_cpt_label () in
+     let cond = gen_exp varList test
+     and t = gen_stmt varList t
+     and f = gen_stmt varList f in
+     cond@[Loadc(IntT,IntV 0); If(BCeq,lbl_false)]@t@[Goto lbl_fin;Label lbl_false]@f@[Label lbl_fin]
+  | While(test,stmt) ->
+     let lbl_test = incr_cpt_label () and lbl_fin = incr_cpt_label () in
+     let test = gen_exp varList test
+     and stmt = gen_stmt varList stmt in
+     [Label lbl_test]@test@[Loadc(IntT,IntV 0);If(BCeq, lbl_fin)]@stmt@[Goto lbl_test;Label lbl_fin]
+       (*Comment trouver le type de la fonction sans environnement ?*)
+  | CallC(name,expList) ->
+     let push_args = List.concat (List.map (gen_exp varList) expList) in
+     let args_tps = List.map (function BoolT -> IntT | t -> t) (List.map tp_of_expr expList) in
+     push_args@[Invoke(VoidT,name,args_tps)]
+  | Return exp ->
+     let tp = tp_of_expr exp in
+     [ReturnI tp]
+;;
 (* ************************************************************ *)
 (* **** Compilation of methods / programs                  **** *)
 (* ************************************************************ *)
