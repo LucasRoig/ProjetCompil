@@ -75,23 +75,14 @@ let rec gen_stmt varList = function
      let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(VoidT,name,args_tps)]
   | Return exp ->
-     let tp = tp_of_expr exp in
-     [ReturnI tp]
-;;
-
-(*Genere la suite de loadc permettant de recuperer les parametres sur la pile
-Il faut tester si les parametres finissent dans les bons registres ou sont inverse.*)
-let gen_store_params list =
-  let rec aux i = function
-      [] -> []
-    | t::q -> Loadc(IntT,IntV i)::(aux (i+1) q) in
-  aux 0 list
+     let tp = boolT_to_intT (tp_of_expr exp) in
+     (gen_exp varList exp)@[ReturnI tp]
 ;;
 
 let gen_fundefn (Fundefn (Fundecl(retTp,fname,params), locVars, stmt)) =
   let meth_info = Methinfo(50,50) in (*constantes arbitraires pour l'instant*)
   let meth_decl = Methdecl(boolT_to_intT retTp,fname,List.map boolT_to_intT (List.map tp_of_vardecl params)) in
-  let stmt_list = (gen_store_params params)@(gen_stmt (List.map name_of_vardecl (params@locVars)) stmt) in
+  let stmt_list = (gen_stmt (List.map name_of_vardecl (params@locVars)) stmt) in
   Methdefn(meth_decl,meth_info,stmt_list)
 ;;
 (* ************************************************************ *)
