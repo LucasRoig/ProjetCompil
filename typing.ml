@@ -119,8 +119,9 @@ let rec tp_stmt env = function
      let exp = tp_expr env cond in
      verifie_type BoolT (tp_of_expr exp);
      While(exp,tp_stmt env stmt)
-  | CallC(name,args) ->
-     let Fundecl(_,_,argsAttendus) = cherche_fun env name in
+  | CallC(name,args) -> (*doit etre de type void*)
+     let Fundecl(tp,_,argsAttendus) = cherche_fun env name in
+     verifie_type VoidT tp;
      if List.length args <> List.length argsAttendus
      then raise(Erreur_typage(Arite(name,List.length args,List.length argsAttendus)))
      else let argsReels = List.map(tp_expr env) args in

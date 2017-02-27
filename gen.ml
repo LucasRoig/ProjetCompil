@@ -69,8 +69,8 @@ let rec gen_stmt varList = function
      let test = gen_exp varList test
      and stmt = gen_stmt varList stmt in
      [Label lbl_test]@test@[Loadc(IntT,IntV 0);If(BCeq, lbl_fin)]@stmt@[Goto lbl_test;Label lbl_fin]
-       (*Comment trouver le type de la fonction sans environnement ?*)
   | CallC(name,expList) ->
+     (*Comment trouver le type de la fonction sans environnement ?*)
      let push_args = List.concat (List.map (gen_exp varList) expList) in
      let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(VoidT,name,args_tps)]
