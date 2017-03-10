@@ -1,1 +1,19 @@
-Doit contenir une description succincte de votre travail.
+Projet compilation L3
+Compilateur C (simplifié) vers Java ByteCode, écrit en Ocaml.
+
+On approche de la fin du projet, le compilateur devrait pouvoir traiter n'importe quel programme.
+
+Execution des tests :
+  compiler le projet avec un make
+  Dans le dossier Tests executer les commandes suivantes :
+    ../comp test.c test.j
+    java -jar jasmin.jar test.j
+    javac WrapperTest.java
+    java WrapperTest
+
+A faire :
+  Typage : verifier qu'il n'existe pas deux fonctions, ou deux variables locales ayant le même nom.
+  Generation du ByteCode : semble terminée.
+  Analyses : Revoir le definite assignment en particulier le comportement des variables globales.
+  Tests : écrire des programmes complexes.
+  Relire le code et clarifier les fonctions dont le comportement n'est pas explicite.
