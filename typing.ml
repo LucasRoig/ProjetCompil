@@ -60,6 +60,11 @@ and cherche_fun env nom =
        else cherche nom t in
   cherche nom env.funbind;;
 
+let cherche_var env nom =
+  try (Local,cherche_var_locale env nom)
+  with Erreur_typage(Indefini _) -> (Global, cherche_var_globale env nom)
+;;
+
 let verifie_type type_attendu type_reel =
   if type_attendu <> type_reel then
     raise (Erreur_typage(Conflit(type_attendu, type_reel)))
@@ -69,9 +74,9 @@ let rec tp_expr env = function
     Const(_,BoolV(b)) -> Const(BoolT,BoolV(b))
   | Const(_,IntV(x)) -> Const(IntT, IntV(x))
   | Const(_,VoidV) -> Const(VoidT,VoidV)
-  | VarE(_,Var(binding,name)) ->
-     if binding = Local then VarE(cherche_var_locale env name,Var(binding,name))
-     else VarE(cherche_var_globale env name,Var(binding,name))
+  | VarE(_,Var(_,name)) ->
+     let (binding,tp) = cherche_var env name in
+     VarE(tp,Var(binding,name))
   | BinOp(_,op,arg1,arg2) ->
      let exp1=tp_expr env arg1 and exp2=tp_expr env arg2 in
      let tp1 = tp_of_expr exp1 and tp2 =tp_of_expr exp2 in
@@ -105,9 +110,8 @@ let rec tp_stmt env = function
      verifie_type env.returntp (tp_of_expr e);
      Return e (*Que donne return; (sans expression)*)
   | Seq(s1,s2) -> Seq(tp_stmt env s1, tp_stmt env s2)
-  | Assign (_,Var(binding,nom),exp) ->
-     let varType = if (binding = Local) then cherche_var_locale env nom
-                             else cherche_var_globale env nom in
+  | Assign (_,Var(_,nom),exp) ->
+     let (binding,varType) = cherche_var env nom in
      let e = tp_expr env exp in
      verifie_type varType (tp_of_expr e);
      Assign(VoidT,Var(binding,nom),e)

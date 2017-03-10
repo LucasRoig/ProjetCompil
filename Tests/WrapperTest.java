@@ -32,5 +32,9 @@ public class WrapperTest{
         if(MyClass.fibo(10) != 55)
             printErrror("fibo",55,MyClass.fibo(10));
         else System.out.println("fibo : OK");
+
+        if(MyClass.pair(18)==1)
+            System.out.println ("pair : ok");
+        else printErrror("pair","Erreur due a un CallE",1,MyClass.pair(18));
     }
 }

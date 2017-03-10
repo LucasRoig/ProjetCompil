@@ -20,3 +20,13 @@ int fibo(int n){
   }
   return x;
 }
+
+bool pair(int n){
+  if(n==0){return true;}
+  return impair(n-1);
+}
+
+bool impair(int n){
+  if(n==0){return false;}
+  return pair(n-1);
+}

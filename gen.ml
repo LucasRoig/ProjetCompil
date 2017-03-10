@@ -22,13 +22,14 @@ let position e list =
     | [] -> failwith "position : l'element n'est pas dans la liste, le typage ne fonctionne pas" in
   pos 0 e list;;
 
-(*Le cas des variables globales est a gerer*)
 let rec gen_exp varList = function
     Const(IntT,v) -> [Loadc(IntT,v)]
   | Const(BoolT,BoolV t) ->
      if t then [Loadc(IntT, IntV 1)](*true est remplace par 1*)
      else [Loadc(IntT, IntV 0)] (*false par 0*)
-  | VarE(_,Var(binding,name)) -> [Loadv(IntT, position name varList)]
+  | VarE(_,Var(binding,name)) ->
+     if binding = Local then[Loadv(IntT, position name varList)]
+     else [Getstatic(IntT, name)]
   | BinOp(_,op,exp1,exp2) ->
      let l1 = gen_exp varList exp1 and l2 = gen_exp varList exp2 in
      begin match op with
@@ -55,8 +56,11 @@ let rec gen_exp varList = function
 let rec gen_stmt varList = function
     Skip -> [Nop]
   | Assign(tp,Var(binding,name),exp)->
-     let pos = position name varList in
-     (gen_exp varList exp)@[Storev(IntT,pos)]
+     let instr_list = gen_exp varList exp in
+     if binding = Local then
+       let pos = position name varList in
+       instr_list@[Storev(IntT,pos)]
+     else instr_list@[Putstatic(IntT,name)]
   | Seq(s1,s2) -> (gen_stmt varList s1)@(gen_stmt varList s2)
   | Cond(test,t,f) ->
      let lbl_false = incr_cpt_label () and lbl_fin = incr_cpt_label () in
@@ -70,17 +74,17 @@ let rec gen_stmt varList = function
      and stmt = gen_stmt varList stmt in
      [Label lbl_test]@test@[Loadc(IntT,IntV 0);If(BCeq, lbl_fin)]@stmt@[Goto lbl_test;Label lbl_fin]
   | CallC(name,expList) ->
-     (*Comment trouver le type de la fonction sans environnement ?*)
      let push_args = List.concat (List.map (gen_exp varList) expList) in
      let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(VoidT,name,args_tps)]
+  | Return (Const(VoidT,VoidV)) -> [ReturnI VoidT]
   | Return exp ->
      let tp = boolT_to_intT (tp_of_expr exp) in
      (gen_exp varList exp)@[ReturnI tp]
 ;;
 
 let gen_fundefn (Fundefn (Fundecl(retTp,fname,params), locVars, stmt)) =
-  let meth_info = Methinfo(50,50) in (*constantes arbitraires pour l'instant*)
+  let meth_info = Methinfo(Analyses.stack_depth_c stmt, (List.length params + List.length locVars)) in (*constantes arbitraires pour l'instant*)
   let meth_decl = Methdecl(boolT_to_intT retTp,fname,List.map boolT_to_intT (List.map tp_of_vardecl params)) in
   let stmt_list = (gen_stmt (List.map name_of_vardecl (params@locVars)) stmt) in
   Methdefn(meth_decl,meth_info,stmt_list)

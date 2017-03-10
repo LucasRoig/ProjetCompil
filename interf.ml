@@ -1,5 +1,4 @@
 (* Interface with parser *)
-
 exception ParseLexError of exn * (string * int * int * string * string)
 
 let parse_file infile = 
@@ -32,12 +31,14 @@ let parse infile =
     failwith "Stopped execution."
 ;;
 
+
 let generate infile outfile = 
   let outf = open_out outfile in
   let str = 
     Print_instr.pr_jvm_prog 
-      (Gen.gen_prog 
-	 (Typing.tp_prog 
-	    (parse infile))) in
+      (Gen.gen_prog
+         (Analyses.analyse_prog
+	    (Typing.tp_prog
+	       (parse infile)))) in
   output_string outf str ; flush outf
 

@@ -10,6 +10,7 @@ open Lang
 (* ****  Statement returns                                 **** *)
 (* ************************************************************ *)
 
+(*Attention, ici on force le return a etre la derniere instruction de la branche*)
 let rec stmt_returns = function
     Skip -> false
   | Assign(_,_,_) -> false
@@ -19,6 +20,8 @@ let rec stmt_returns = function
   | CallC(_,_) -> false
   | Return _ -> true
 ;;
+
+let fundef_returns (Fundefn(Fundecl(_,_,_),_,stmt)) = stmt_returns stmt;;
 
 
 
@@ -87,19 +90,21 @@ let rec defassign_e a = function
 ;;
 
 exception Def_assign_exception;;
+(* Attention, on force les variables globales a etre initialisees dans chaque fonction ou elles
+sont utilisees 
+Que faire avec les parametres de la fonction ?*)
 let rec defassign_c a = function
   Skip -> a
   | Assign (_,Var(_,name),e) ->
      if defassign_e a e then StringSet.add name a else raise Def_assign_exception
-  | Seq(Assign(t,var,e) ,stmt2) ->
-     let a = defassign_c a (Assign(t,var,e)) in
+  | Seq(stmt1,stmt2) ->
+     let a = defassign_c a stmt1 in
      defassign_c a stmt2
-  | Seq(_,stmt2) -> defassign_c a stmt2
   | Cond(e,stmt1,stmt2) ->
      if defassign_e a e then
-       let _ = defassign_c a stmt1 in
-       let _ = defassign_c a stmt2 in
-       a
+       let s1 = defassign_c a stmt1 in
+       let s2 = defassign_c a stmt2 in
+       StringSet.inter s1 s2
      else raise Def_assign_exception
   | While(e,stmt) ->
      if defassign_e a e then
@@ -110,3 +115,21 @@ let rec defassign_c a = function
      if List.exists not exp_def then raise Def_assign_exception
      else a
   | Return e -> if defassign_e a e then a else raise Def_assign_exception;;
+
+(*Ici on considere que les parametres sont definis *)
+let defassign_fundef (Fundefn(Fundecl(_,_,params_list),_,stmt)) =
+    let params_names = List.map name_of_vardecl params_list in
+    let set = List.fold_right (StringSet.add) params_names  StringSet.empty in
+    let _ = defassign_c set stmt in
+    ()
+;;
+
+(*Une vraie erreur pour stmt_returns serait bien,
+Un vrai affichage des erreurs aussi*)
+(*Effectue les differentes analyses et renvoie le programme s'il n'y a pas d'erreurs*)
+let analyse_prog (Prog(gvds,fdfs)) =
+  List.iter (defassign_fundef) fdfs;
+  (*stmt_returns*)
+  let fun_returns = List.map (fundef_returns) fdfs in
+  if List.exists (fun b -> not b) fun_returns then failwith("Une branche de fonction ne contient pas de return")
+  else Prog(gvds,fdfs);;
