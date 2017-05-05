@@ -1,13 +1,13 @@
 public class WrapperTest{
 
-    public static void printErrror(String fctNom,String message, int resultatAttendu, int resultatReel){
+    public static void printError(String fctNom,String message, int resultatAttendu, int resultatReel){
         System.out.println("Erreur dans la fonction : " + fctNom);
         System.out.println(message);
         System.out.println("resultat attendu : " + resultatAttendu);
         System.out.println("resultat reel : " + resultatReel);
     }
 
-    public static void printErrror(String fctNom, int resultatAttendu, int resultatReel){
+    public static void printError(String fctNom, int resultatAttendu, int resultatReel){
         System.out.println("Erreur dans la fonction : " + fctNom);
         System.out.println("resultat attendu : " + resultatAttendu);
         System.out.println("resultat reel : " + resultatReel);
@@ -18,23 +18,27 @@ public class WrapperTest{
         int y = 2;
 
         if(MyClass.fstProj(x,y) != x)
-            printErrror("fstProj","les parametres ne s'empilent pas dans le bon ordre"
+            printError("fstProj","les parametres ne s'empilent pas dans le bon ordre"
                         ,1,MyClass.fstProj(x,y));
         else
             System.out.println("fstProj : OK");
 
         if(MyClass.scdProj(x,y) != y)
-            printErrror("scdProj","les parametres ne s'empilent pas dans le bon ordre",
+            printError("scdProj","les parametres ne s'empilent pas dans le bon ordre",
                         2,MyClass.scdProj(x,y));
         else
             System.out.println("scdProj : OK");
 
         if(MyClass.fibo(10) != 55)
-            printErrror("fibo",55,MyClass.fibo(10));
+            printError("fibo",55,MyClass.fibo(10));
         else System.out.println("fibo : OK");
 
         if(MyClass.pair(18)==1)
             System.out.println ("pair : ok");
-        else printErrror("pair","Erreur due a un CallE",1,MyClass.pair(18));
+        else printError("pair","Erreur due a un CallE",1,MyClass.pair(18));
+
+	if(MyClass.sumImpair(10)==25)
+	    System.out.println("sumImpair : ok");
+	else printError("sumImpair",25,MyClass.impair(10));
     }
 }

@@ -132,13 +132,6 @@ let rec tp_stmt env = function
           List.iter2 verifie_type (List.map tp_of_vardecl argsAttendus) (List.map tp_of_expr argsReels);
           CallC(name,argsReels)
 ;;
-(*tester cette fonction est plus que necessaire*)
-let pas_doublons nom list =
-  let table = Hashtbl.create (List.length list) in
-  let append e = if Hashtbl.mem table e
-    then raise(Erreur_typage(Fundecl_err(nom,"Certains parametres ou variables ont le meme nom")))
-    else Hashtbl.add table e true in
-  List.iter append list;;
 
 let tp_fdefn env (Fundefn(Fundecl(tpRet,name,params),locVars,body)) =
   (*Verifier que le type des parametres et des variables n'est pas void*)
@@ -146,13 +139,18 @@ let tp_fdefn env (Fundefn(Fundecl(tpRet,name,params),locVars,body)) =
   if List.exists (function (Vardecl(tp,_)) -> tp = VoidT) params_et_vars
   then raise (Erreur_typage(Fundecl_err(name,"Un parametre ou une variable locale est de type void")))
   else (*Verifier que les parametres et les variables ont un nom different*)
-    pas_doublons name params_et_vars;
-    let newEnv = List.fold_right ajout_variable_locale params_et_vars (change_returntp tpRet env) in
-    Fundefn(Fundecl(tpRet,name,params),locVars,tp_stmt newEnv body)
+    if List.length params_et_vars != List.length (List.sort_uniq (function a -> function b -> if a=b then 0 else if a > b then 1 else -1) params_et_vars)
+    then raise(Erreur_typage(Fundecl_err(name,"Certains parametres ou variables ont le meme nom")))
+    else let newEnv = List.fold_right ajout_variable_locale params_et_vars (change_returntp tpRet env) in
+         Fundefn(Fundecl(tpRet,name,params),locVars,tp_stmt newEnv body)
 ;;
 
 (*Faire un joli affichage d'erreurs serait sympa*)
 let tp_prog (Prog (gvds, fdfs)) =
-  let env_initial = List.fold_right ajout_variable_globale gvds (env_initial fdfs) in
-  Prog(gvds, List.map (tp_fdefn env_initial) fdfs)
+(*Verifier que deux variables globales n'ont pas le meme nom*)
+  let var_names = List.map name_of_vardecl gvds
+  in if List.length var_names != List.length (List.sort_uniq (function a -> function b -> if a=b then 0 else if a>b then 1 else -1) var_names)
+    then failwith "Certaines varibales locales ont le meme nom"
+    else let env_initial = List.fold_right ajout_variable_globale gvds (env_initial fdfs) in
+         Prog(gvds, List.map (tp_fdefn env_initial) fdfs)
 ;;

@@ -44,7 +44,7 @@ let rec stack_depth_e = function
      (*ici lors de l'evaluation d'un parametre on a deja empile tous les parametres precedents
        la profondeur depend donc de l'ordre d'evaluation des parametres. On peut simplifier
        le probleme en considerant que la profondeur est le maximum des profondeurs des parametres
-       plus le nombre de parametres moins 1*)
+       plus le nombre de parametres*)
      let d_list = List.map stack_depth_e e_list in
      List.fold_left max 0 d_list + List.length d_list
 ;;
@@ -82,7 +82,8 @@ module StringSet =
 ;;
 let rec defassign_e a = function
     Const(_,_) -> true
-  | VarE(_,Var(_,name)) -> StringSet.mem name a
+  (*Les variables globales sont ignorees comme indique dans la doc java *)
+  | VarE(_,Var(binding,name)) -> binding == Global || StringSet.mem name a
   | BinOp(_,_,e1,e2) -> defassign_e a e1 && defassign_e a e2
   | IfThenElse(_,e1,e2,e3) -> defassign_e a e1 && defassign_e a e2 && defassign_e a e3
   | CallE(_,_,e_list) ->
@@ -90,9 +91,6 @@ let rec defassign_e a = function
 ;;
 
 exception Def_assign_exception;;
-(* Attention, on force les variables globales a etre initialisees dans chaque fonction ou elles
-sont utilisees 
-Que faire avec les parametres de la fonction ?*)
 let rec defassign_c a = function
   Skip -> a
   | Assign (_,Var(_,name),e) ->
@@ -116,7 +114,6 @@ let rec defassign_c a = function
      else a
   | Return e -> if defassign_e a e then a else raise Def_assign_exception;;
 
-(*Ici on considere que les parametres sont definis *)
 let defassign_fundef (Fundefn(Fundecl(_,_,params_list),_,stmt)) =
     let params_names = List.map name_of_vardecl params_list in
     let set = List.fold_right (StringSet.add) params_names  StringSet.empty in

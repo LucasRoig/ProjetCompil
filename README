@@ -1,7 +1,9 @@
 Projet compilation L3
 Compilateur C (simplifié) vers Java ByteCode, écrit en Ocaml.
 
-On approche de la fin du projet, le compilateur devrait pouvoir traiter n'importe quel programme.
+L'intégralité du projet a été traité.
+Le compilateur devrait être capable de compiler n'importe quel programme correct.
+Ecrire des tests plus complexes n'est pas évident, l'absence de tableau dans le langage m'empêche d'essayer la plupart des algorithme que je connais.
 
 Execution des tests :
   compiler le projet avec un make
@@ -12,8 +14,5 @@ Execution des tests :
     java WrapperTest
 
 A faire :
-  Typage : verifier qu'il n'existe pas deux fonctions, ou deux variables locales ayant le même nom.
-  Generation du ByteCode : semble terminée.
-  Analyses : Revoir le definite assignment en particulier le comportement des variables globales.
   Tests : écrire des programmes complexes.
   Relire le code et clarifier les fonctions dont le comportement n'est pas explicite.

@@ -30,3 +30,20 @@ bool impair(int n){
   if(n==0){return false;}
   return pair(n-1);
 }
+
+int sumImpair(int n){
+  int sum;
+  sum = 0;
+  while(n > 0){
+    if(impair(n)){
+      sum = sum + n;
+    }
+    n = n-1;
+  }
+  return sum;
+}
+
+void error (int n){
+  int x;
+  return;
+}

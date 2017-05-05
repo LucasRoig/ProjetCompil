@@ -50,7 +50,7 @@ let rec gen_exp varList = function
      let args_tps = List.map boolT_to_intT (List.map tp_of_expr expList) in
      push_args@[Invoke(ret_type,name,args_tps)]
   | _ ->
-     failwith "Le filtrage de gen_exp n'as pas fonctionne, il y a certainement une erreur de typage"
+     failwith "Le filtrage de gen_exp n'a pas fonctionne, il y a certainement une erreur de typage"
 ;;
 
 let rec gen_stmt varList = function
